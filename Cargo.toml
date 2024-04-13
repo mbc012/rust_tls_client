@@ -2,7 +2,7 @@
 name = "rust_tls_client"
 version = "0.1.0"
 edition = "2021"
-include = ["/src", "/bin/*"]
+include = ["/src"]
 
 description = "A rust tls client based on the cffi distributions of bogdanfinn/tls-client"
 license = "BSD-3"
