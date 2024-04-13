@@ -5,7 +5,6 @@ mod types;
 mod request;
 
 use std::collections::HashMap;
-use std::hash::Hash;
 use serde;
 use serde::{Deserialize, Serialize};
 
@@ -82,17 +81,4 @@ impl Payload {
             cookies: None,
         }
     }
-}
-
-
-
-
-
-
-
-fn main() {
-    // let rp = RequestPayload::new();
-    //
-    // let tls_client = TlsClientSharedMethods::new("C:/Users/Zombi/RustroverProjects/rust-projects/r7-scraper/tls-client-windows-64-v1.7.2.dll").unwrap();
-    // let res = tls_client.request(&rp);
 }

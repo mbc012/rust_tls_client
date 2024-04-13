@@ -222,6 +222,7 @@ pub enum KeyShareCurve {
 }
 
 // KdfIds
+#[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub enum KdfId {
     #[serde(rename = "HKDF_SHA256")]
@@ -233,6 +234,7 @@ pub enum KdfId {
 }
 
 // AeadIds
+#[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub enum AeadId {
     #[serde(rename = "AEAD_AES_128_GCM")]

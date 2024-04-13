@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::ops::Deref;
-use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::request::{RequestPayload};
@@ -254,10 +252,11 @@ pub struct PriorityParam {
 
 
 mod tests {
+    #[cfg(test)]
     use std::io::Read;
-    use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONTENT_TYPE, HeaderValue, USER_AGENT};
-    use serde_json::Value::String;
-    use crate::types::ClientIdentifier;
+    #[cfg(test)]
+    use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONTENT_TYPE, USER_AGENT, HeaderMap, HeaderValue};
+    #[cfg(test)]
     use super::*;
 
     #[test]
@@ -294,7 +293,7 @@ mod tests {
             .body("foo=bar&baz=foo")
             .send()
             .unwrap();
-        
+
         assert_eq!(req.get_status(), 200)
     }
     

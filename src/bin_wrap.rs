@@ -7,7 +7,7 @@ use crate::error::TlsClientError;
 use crate::{RequestResponse};
 use crate::request::{RequestPayload};
 
-const GITHUB_API_URL: &'static str = "https://api.github.com/repos/bogdanfinn/tls-client/releases/latest";
+//const GITHUB_API_URL: &'static str = "https://api.github.com/repos/bogdanfinn/tls-client/releases/latest";
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-windows-64-v1.7.2.dll");
@@ -45,7 +45,6 @@ lazy_static! {
 #[derive(Debug)]
 pub struct TlsClientSharedMethods {
     lib: Library,
-    f: TlsClientBinaryFile,
 }
 
 impl TlsClientSharedMethods {
@@ -53,7 +52,7 @@ impl TlsClientSharedMethods {
         unsafe {
             let bf = TlsClientBinaryFile::new();
             Library::new(bf.path())
-                .map(|lib| Self { lib, f: bf })
+                .map(|lib| Self { lib })
                 .map_err(|_| TlsClientError::GeneralError("Failed to build TLS Client".to_string()))
         }
     }
@@ -61,7 +60,7 @@ impl TlsClientSharedMethods {
     pub fn new(dll_path: &str) -> Result<Self, TlsClientError> {
         unsafe {
             Library::new(dll_path)
-                .map(|lib| Self { lib, f: TlsClientBinaryFile::from(dll_path) })
+                .map(|lib| Self { lib })
                 .map_err(|_| TlsClientError::GeneralError("Failed to build TLS Client".to_string()))
         }
     }
@@ -159,10 +158,6 @@ impl TlsClientBinaryFile {
         Self(fp.to_owned())
     }
     
-    pub fn from(v: &str) -> Self {
-        Self(v.to_string())
-    }
-    
     pub fn path(&self) -> &String {
         &self.0
     }
@@ -170,7 +165,7 @@ impl TlsClientBinaryFile {
 
 
 mod tests {
-    use super::*;
+    //use super::*;
 
     // #[test]
     // fn test_bin_path() {
