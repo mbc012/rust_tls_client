@@ -1,8 +1,9 @@
 
 # rust_tls_client
 
-A rust tls client based on the cffi distributions of bogdanfinn/tls-client.
+A rust tls client based on the cffi distributions of bogdanfinn/tls-client, designed to work with, and similar to the reqwest library. Automatically downloads the latest distribution (based on system) and stores in the temp dir. 
 
+* Note: It has only been tested on Windows 64bit.
 
 ## Usage/Examples
 

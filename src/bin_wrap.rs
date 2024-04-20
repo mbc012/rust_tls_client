@@ -3,35 +3,12 @@ use std::io::Write;
 use std::os::raw::c_char;
 use lazy_static::lazy_static;
 use libloading::{Library, Symbol};
+use reqwest::header::{HeaderMap, HeaderValue};
+use serde::Deserialize;
+use serde_json::Value;
 use crate::error::TlsClientError;
 use crate::{RequestResponse};
 use crate::request::{RequestPayload};
-
-//const GITHUB_API_URL: &'static str = "https://api.github.com/repos/bogdanfinn/tls-client/releases/latest";
-
-#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-windows-64-v1.7.2.dll");
-
-#[cfg(all(target_os = "windows", target_arch = "x86"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-windows-32-v1.7.2.dll");
-
-#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-darwin-amd64-v1.7.2.dylib");
-
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-darwin-arm64-v1.7.2.dylib");
-
-#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-linux-arm64-v1.7.2.so");
-
-#[cfg(all(target_os = "linux", target_arch = "arm"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-linux-armv7-v1.7.2.so");
-
-#[cfg(all(target_os = "linux", target_arch = "x86_64", feature = "alpine"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-linux-alpine-amd64-v1.7.2.so");
-
-#[cfg(all(target_os = "linux", target_arch = "x86_64", feature = "ubuntu"))]
-const BINARY_FILE: &'static [u8] = include_bytes!("../bin/tls-client-linux-ubuntu-amd64-v1.7.2.so");
 
 
 lazy_static! {
@@ -41,16 +18,17 @@ lazy_static! {
 }
 
 
-
 #[derive(Debug)]
 pub struct TlsClientSharedMethods {
     lib: Library,
 }
-
 impl TlsClientSharedMethods {
     pub fn new_default() -> Result<Self, TlsClientError> {
         unsafe {
-            let bf = TlsClientBinaryFile::new();
+            let bf = TlsClientBinaryDownloader::new()
+                .map_err(TlsClientError::GeneralError)
+                .unwrap();
+            
             Library::new(bf.path())
                 .map(|lib| Self { lib })
                 .map_err(|_| TlsClientError::GeneralError("Failed to build TLS Client".to_string()))
@@ -130,50 +108,145 @@ impl Default for TlsClientSharedMethods {
     }
 }
 
-#[derive(Debug)]
-struct TlsClientBinaryFile(pub String);
 
-impl TlsClientBinaryFile {
-    pub fn new() -> Self {
+struct TlsClientBinaryDownloader(pub String);
+impl TlsClientBinaryDownloader {
+    pub fn new() -> Result<Self, String> {
+        let info = Self::get_latest_info()?;
+        let url = Self::parse_for_file(info)?;
+        let path = Self::download_save_file(url)?;
+        Ok(Self(path))
+    }
+    
+    fn download_save_file(url: String) -> Result<String, String> {
+        let cli = reqwest::blocking::Client::new();
+        let req = cli.get(url)
+            .send()
+            .map_err(|_| String::from("Failed to download file."))?
+            .bytes()
+            .map_err(|_| String::from("Failed to convert to bytes."))?
+            .to_vec();
+
         let filename = "tls_client_binary".to_owned() + match std::env::consts::OS {
             "windows" => ".dll",
             "macos" => ".dylib",
             "linux" => ".so",
-            _ => panic!("Unsupported OS")
+            _ => return Err(String::from("Invalid OS detected.")),
         };
-        
+
         let mut dir = std::env::temp_dir();
-        
+
         dir.push("rust_tls_client");
         let _ = std::fs::create_dir_all(&dir);
-        
+
         dir.push(filename);
         let fp = &dir.display().to_string();
+
+        let mut file = std::fs::File::create(fp).unwrap();
+        file.write_all(req.as_slice()).unwrap();
         
-        if !dir.exists() {
-            let mut file = std::fs::File::create(fp).unwrap();
-            file.write_all(BINARY_FILE).unwrap();
-        }
-        
-        Self(fp.to_owned())
+        Ok(fp.to_string())
     }
     
-    pub fn path(&self) -> &String {
-        &self.0
+    fn parse_for_file(info: Vec<AssetEntry>) -> Result<String, String> {
+        let os = match std::env::consts::OS {
+            "windows" => "-windows",
+            "macos" => "-darwin",
+            "linux" => "-linux",
+            _ => return Err(String::from("Invalid OS detected.")),
+        };
+
+        let arch = match std::env::consts::ARCH {
+            "x86" => "-32",
+            "x86_64" => if os == "-windows" { "-64" } else { "-amd64" },
+            "aarch64" => "-arm64",
+            "arm" => "-armv7",
+            _ => return Err(String::from("Invalid AARCH detected.")),
+        };
+
+        let mut url = String::new();
+        for item in info {
+            let name = item.get_name();
+            if name.contains(os) && name.contains(arch) && !name.contains("xgo") {
+                url = item.get_browser_url();
+            }
+        }
+        
+        if url.is_empty() {
+            return Err(String::from("No file detected."))
+        }
+        
+        Ok(url)
+    }
+    
+    fn get_latest_info() -> Result<Vec<AssetEntry>, String> {
+        let mut header_map = HeaderMap::new();
+        header_map.insert("host", HeaderValue::from_str("api.github.com").unwrap());
+        header_map.insert("user-agent", HeaderValue::from_str("rust_tls_client").unwrap());
+        
+        let client = reqwest::blocking::Client::new();
+        
+        let request = client.get("https://api.github.com/repos/bogdanfinn/tls-client/releases/latest")
+            .headers(header_map)
+            .send()
+            .map_err(|_| String::from("Failed to retrieve latest release."))
+            .unwrap();
+        
+        let build: Value = request
+            .json()
+            .map_err(|_| String::from("Failed to convert response to `Value`."))
+            .unwrap();
+        
+        let assets = match build.get("assets") {
+            Some(val) => val.to_owned(),
+            None => return Err(String::from("Failed to extract asset data."))
+        };
+        
+        let object: Vec<AssetEntry> = serde_json::from_value(assets)
+            .map_err(|_| String::from("Failed to deserialize."))
+            .unwrap();
+        
+        Ok(object)
+    }
+    
+    pub fn path(&self) -> String {
+        self.0.clone()
     }
 }
 
 
-mod tests {
-    //use super::*;
-
-    // #[test]
-    // fn test_bin_path() {
-    //     let bin_name = BinPath::build_binary_name();
-    //     println!("{}", bin_name);
-    //     let file_names = BinPath::get_file_names();
-    //     assert_eq!(file_names, vec!["win64.dll".to_string()]);
-    // }
-
-
+#[derive(Deserialize)]
+struct AssetEntry {
+    url: String,
+    name: String,
+    browser_download_url: String,
 }
+impl AssetEntry {
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn get_url(&self) -> String {
+        self.url.clone()
+    }
+
+    pub fn get_browser_url(&self) -> String {
+        self.browser_download_url.clone()
+    }
+}
+
+
+// 
+// mod tests {
+//     use super::*;
+// 
+//     #[test]
+//     fn test_get_latest() {
+//         let tcbd = TlsClientBinaryDownloader::new();
+//         
+//     }
+//     
+//     
+// 
+// 
+// }
