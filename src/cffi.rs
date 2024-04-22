@@ -7,12 +7,13 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use serde::Deserialize;
 use serde_json::Value;
 use crate::error::TlsClientError;
-use crate::{RequestResponse};
+use crate::response::RequestResponse;
 use crate::request::{RequestPayload};
 
 
 lazy_static! {
     pub static ref SHARED_METHODS: TlsClientSharedMethods = TlsClientSharedMethods::new_default().unwrap();
+    // TODO: Add threadsafe impl
     // Threadsafe
     // static ref TS_SHARED_METHODS: Mutex<TlsClientSharedMethods> = Mutex::new(TlsClientSharedMethods::new_default().unwrap());
 }
@@ -217,7 +218,6 @@ impl TlsClientBinaryDownloader {
 
 #[derive(Deserialize)]
 struct AssetEntry {
-    url: String,
     name: String,
     browser_download_url: String,
 }
@@ -225,11 +225,7 @@ impl AssetEntry {
     pub fn get_name(&self) -> String {
         self.name.clone()
     }
-
-    pub fn get_url(&self) -> String {
-        self.url.clone()
-    }
-
+    
     pub fn get_browser_url(&self) -> String {
         self.browser_download_url.clone()
     }

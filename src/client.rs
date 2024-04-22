@@ -5,7 +5,7 @@ use crate::request::{RequestPayload};
 use crate::types::{AeadId, ClientIdentifier, DelegatedCredential, H2Setting, KdfId, KeyShareCurve, SignatureAlgorithm, SupportedVersion};
 
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TlsClient {
     // Session Parameters
@@ -44,11 +44,7 @@ impl TlsClient {
             request_url: Some(url),
             request_method: Some(method),
         };
-        serde_json::from_value(serde_json::to_value(&tc).unwrap()).unwrap()
-    }
-
-    pub fn default() -> Self {
-        Self::new(ClientIdentifier::Chrome120, false)
+        serde_json::from_value(serde_json::to_value(tc).unwrap()).unwrap()
     }
 
     pub fn new(client_identifier: ClientIdentifier, random_tls_order: bool) -> TlsClient {
@@ -114,6 +110,12 @@ impl TlsClient {
         self.build_for_request("POST".to_string(), url.to_string())
     }
 
+}
+
+impl Default for TlsClient {
+    fn default() -> Self {
+        Self::new(ClientIdentifier::Chrome120, false)
+    }
 }
 
 /// Simple builder client for generating custom profiles for the `TlsClient`

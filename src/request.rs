@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
-use crate::bin_wrap::{SHARED_METHODS};
+use crate::cffi::{SHARED_METHODS};
 use crate::client::{CustomClient};
 use crate::error::TlsClientError;
-use crate::RequestResponse;
+use crate::response::RequestResponse;
 use crate::types::ClientIdentifier;
 
 #[derive(Debug, Default, Deserialize, Serialize)]

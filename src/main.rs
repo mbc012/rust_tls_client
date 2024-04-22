@@ -8,4 +8,9 @@ fn main() {
         .send()
         .unwrap();
     println!("{}", serde_json::to_string(&res).unwrap());
+
+    let res2 = client.get("https://www.google.com")
+        .send()
+        .unwrap();
+    println!("{}", serde_json::to_string(&res2).unwrap());
 }

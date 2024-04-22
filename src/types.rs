@@ -92,11 +92,18 @@ pub enum ClientIdentifier {
     ConfirmedIOS,
 }
 
-impl Into<String> for ClientIdentifier {
-    fn into(self) -> String {
-        serde_json::to_string(&self).unwrap()
+// impl Into<String> for ClientIdentifier {
+//     fn into(self) -> String {
+//         serde_json::to_string(&self).unwrap()
+//     }
+// }
+
+impl From<String> for ClientIdentifier {
+    fn from(value: String) -> Self {
+        serde_json::from_value(value.into()).unwrap()
     }
 }
+
 
 
 // TODO: CHECK GPT GENERATED CODE:
