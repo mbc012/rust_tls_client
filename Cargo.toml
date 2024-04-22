@@ -5,7 +5,7 @@ edition = "2021"
 include = ["/src"]
 
 description = "A rust tls client based on the cffi distributions of bogdanfinn/tls-client"
-license = "BSD-4"
+license = "BSD-3-Clause"
 homepage = "https://github.com/mbc012/rust_tls_client"
 documentation = "https://docs.rs/rust_tls_client"
 repository = "https://github.com/mbc012/rust_tls_client"
